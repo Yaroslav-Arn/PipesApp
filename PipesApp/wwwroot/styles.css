@@ -1,0 +1,84 @@
+﻿/* Стиль для таблицы */
+table {
+    border-collapse: collapse;
+    width: 100%;
+}
+
+/* Стиль для заголовков и ячеек таблицы */
+th, td {
+    border: 1px solid #dddddd;
+    text-align: left;
+    padding: 8px;
+}
+
+/* Стиль для заголовков таблицы */
+th {
+    background-color: #f2f2f2;
+}
+
+/* Стиль для модального окна */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0,0,0,0.4);
+    padding-top: 60px;
+}
+
+/* Стиль для контента модального окна */
+.modal-content {
+    background-color: #fefefe;
+    margin: 5% auto;
+    padding: 20px;
+    border: 1px solid #888;
+    width: 80%;
+}
+
+/* Стиль для кнопки закрытия модального окна */
+.close {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+}
+
+    /* Стиль для кнопки закрытия модального окна при наведении и фокусе */
+    .close:hover,
+    .close:focus {
+        color: black;
+        text-decoration: none;
+        cursor: pointer;
+    }
+
+/* Стиль для меток полей ввода */
+.input-label {
+    margin-bottom: 10px;
+}
+
+/* Стиль для полей ввода */
+.input-field {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 20px;
+    box-sizing: border-box;
+}
+
+/* Стиль для кнопки "Добавить" */
+.add-button {
+    background-color: #4CAF50;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    cursor: pointer;
+    border-radius: 5px;
+}
+
+    /* Стиль для кнопки "Добавить" при наведении */
+    .add-button:hover {
+        background-color: #45a049;
+    }
