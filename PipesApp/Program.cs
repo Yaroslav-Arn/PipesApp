@@ -1,30 +1,35 @@
-using Microsoft.AspNetCore.Builder;
+п»їusing Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.EntityFrameworkCore;
 using PipesApp.Contexts;
-using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.FileProviders;
-using System.IO;
+using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authentication;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Добавление сервисов в контейнер.
+// Р”РѕР±Р°РІР»РµРЅРёРµ СЃРµСЂРІРёСЃРѕРІ РІ РєРѕРЅС‚РµР№РЅРµСЂ.
 builder.Services.AddControllers();
-builder.Services.AddDbContext<ApplicationContext>(options => options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+builder.Services.AddDbContext<ApplicationContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// Добавление обслуживания статических файлов
-builder.Services.AddRazorPages(); // Этот метод добавляет обслуживание файлов, таких как Razor страницы, но также включает и обслуживание статических файлов из wwwroot.
-
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddAutoMapper(typeof(Program).Assembly);
 
+// РќР°СЃС‚СЂРѕР№РєР° Р°СѓС‚РµРЅС‚РёС„РёРєР°С†РёРё СЃ РїРѕРјРѕС‰СЊСЋ РєСѓРєРё
+builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+    .AddCookie(options =>
+    {
+        options.LoginPath = "/login"; 
+    });
+
+
 var app = builder.Build();
 
-// Конфигурация конвейера HTTP-запросов.
+// РќР°СЃС‚СЂРѕР№РєР° HTTP Р·Р°РїСЂРѕСЃРѕРІ.
 if (app.Environment.IsDevelopment())
 {
     app.UseDeveloperExceptionPage();
@@ -32,48 +37,73 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-
 app.UseHttpsRedirection();
-
-app.UseAuthorization();
-
-// Включение обслуживания статических файлов из папки wwwroot.
 app.UseStaticFiles();
 
-app.Use(async (context, next) =>
+app.UseRouting();
+
+// Р”РѕР±Р°РІР»СЏРµРј middleware РґР»СЏ Р°СѓС‚РµРЅС‚РёС„РёРєР°С†РёРё Рё Р°РІС‚РѕСЂРёР·Р°С†РёРё
+app.UseAuthentication();
+app.UseAuthorization();
+
+app.MapGet("/login", async (HttpContext context) =>
 {
-    var path = context.Request.Path;
-    if (path == "/login" && context.Request.Method == "POST") // Проверка, обращается ли пользователь к странице входа и отправляет ли POST-запрос
+    // Р§РёС‚Р°РµРј СЃРѕРґРµСЂР¶РёРјРѕРµ С„Р°Р№Р»Р° login.html
+    var htmlContent = await File.ReadAllTextAsync("wwwroot/login.html");
+
+    // РћС‚РїСЂР°РІР»СЏРµРј СЃРѕРґРµСЂР¶РёРјРѕРµ С„Р°Р№Р»Р° РєР°Рє РѕС‚РІРµС‚ РЅР° Р·Р°РїСЂРѕСЃ
+    context.Response.ContentType = "text/html";
+    await context.Response.WriteAsync(htmlContent);
+});
+
+app.MapPost("/login", async (string? returnUrl, HttpContext context) =>
+{
+    var login = context.Request.Form["login"].ToString();
+    var password = context.Request.Form["password"].ToString();
+    using (var dbContext = context.RequestServices.GetRequiredService<ApplicationContext>())
     {
-        var login = context.Request.Form["login"].ToString();
-        var password = context.Request.Form["password"].ToString();
-
-        // Проверка логина и пароля в базе данных (предположим, что у нас есть контекст данных ApplicationContext)
-        using (var dbContext = context.RequestServices.GetRequiredService<ApplicationContext>())
+        var user = await dbContext.Users.FirstOrDefaultAsync(u => u.Login == login);
+        if (user != null && BCrypt.Net.BCrypt.Verify(password, user.Password))
         {
-            var user = dbContext.Users.FirstOrDefault(u => u.Login == login && u.Password == password);
-            if (user != null)
-            {
-                if (user.Role == "User")
-                {
-                    // Аутентификация прошла успешно, перенаправляем на index.html
-                    context.Response.Redirect("/user.html");
-                }
-                else if (user.Role == "Admin")
-                {
-                    // Аутентификация прошла успешно, перенаправляем на index.html
-                    context.Response.Redirect("/admin.html");
-                }
-                return;
-            }
-        }
+            var claims = new List<Claim> { new Claim(ClaimTypes.Name, user.Login) };
 
-        // Если аутентификация не удалась, перенаправляем обратно на страницу входа
-        // Пользователь не найден, отправляем сообщение об ошибке на фронтенд
-        context.Response.Redirect("/login.html");
-        return;
+            ClaimsIdentity claimsIdentity = new ClaimsIdentity(claims, "Cookies");
+
+            await context.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(claimsIdentity));
+            if(user.Role == "Admin")
+            {
+                return Results.Redirect(returnUrl??"/admin.html");
+            }
+            else
+            {
+                return Results.Redirect(returnUrl??"/user.html");
+            }
+            
+        }
+        else
+        {
+            return Results.Redirect(returnUrl??"/login");
+        }
     }
-    await next();
+});
+// Р”Р»СЏ РјР°СЂС€СЂСѓС‚Р° "/admin"
+app.MapGet("/admin", [Authorize] async (HttpContext context) =>
+{
+    // Р§РёС‚Р°РµРј СЃРѕРґРµСЂР¶РёРјРѕРµ С„Р°Р№Р»Р° admin.html
+    var htmlContent = await File.ReadAllTextAsync("wwwroot/admin.html");
+
+    context.Response.ContentType = "text/html";
+    await context.Response.WriteAsync(htmlContent);
+});
+
+// Р”Р»СЏ РјР°СЂС€СЂСѓС‚Р° "/user"
+app.MapGet("/user", [Authorize] async (HttpContext context) =>
+{
+    // Р§РёС‚Р°РµРј СЃРѕРґРµСЂР¶РёРјРѕРµ С„Р°Р№Р»Р° user.html
+    var htmlContent = await File.ReadAllTextAsync("wwwroot/user.html");
+
+    context.Response.ContentType = "text/html";
+    await context.Response.WriteAsync(htmlContent);
 });
 
 app.MapControllers();

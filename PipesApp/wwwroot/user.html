@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Админ</title>
+    <title>Пользователь</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -13,6 +13,7 @@
     <div class="button-container">
         <button onclick="fetchData('Pipes')">Трубы</button>
         <button onclick="fetchData('Packages')">Пакеты</button>
+
         <!-- Кнопка для вызова окна добавления -->
         <button onclick="openAddModal()" class="add-button">Добавить</button>
         <button onclick="openEditModal()" class="add-button">Изменить</button>
@@ -57,15 +58,6 @@
         </div>
     </div>
 
-    <!-- Модальное окно для отображения сообщений об ошибках -->
-    <div id="errorModal" class="modal">
-        <div class="modal-content">
-            <span class="close" onclick="closeErrorModal()">&times;</span>
-            <h2>Ошибка</h2>
-            <p id="errorMessage"></p>
-        </div>
-    </div>
-
     <!-- Модальное окно для удаления записи -->
     <div id="deleteModal" class="modal">
         <div class="modal-content">
@@ -81,7 +73,14 @@
         </div>
     </div>
 
-
+    <!-- Модальное окно для отображения сообщений об ошибках -->
+    <div id="errorModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeErrorModal()">&times;</span>
+            <h2>Ошибка</h2>
+            <p id="errorMessage"></p>
+        </div>
+    </div>
 
     <script src="script.js"></script>
 </body>

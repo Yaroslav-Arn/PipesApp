@@ -380,13 +380,13 @@ function openEditPipeModal() {
                     document.getElementById('editModal').style.display = 'block';
                 })
                 .catch(error => {
-                    console.error('Ошибка при получении данных о пакетах:', error);
-                    showErrorModal('Ошибка при загрузке данных о пакетах');
+                    console.error('Ошибка при получении данных о трубах:', error);
+                    showErrorModal('Ошибка при загрузке данных о трубах');
                 });
         })
         .catch(error => {
-            console.error('Ошибка при получении данных о марках стали:', error);
-            showErrorModal('Ошибка при загрузке данных о марках стали');
+            console.error('Ошибка при получении данных о трубах:', error);
+            showErrorModal('Ошибка при загрузке данных о трубах');
         });
 }
 
@@ -468,6 +468,7 @@ function openAddPipeModal() {
                         fieldInput.name = fieldName;
                         fieldInput.classList.add('input-field');
                         fieldInput.value = ''; // Пустое значение по умолчанию
+                        fieldInput.min = 0; // Минимальное допустимое значение
                         addForm.appendChild(fieldLabel);
                         addForm.appendChild(fieldInput);
                     });
@@ -582,51 +583,64 @@ function editData() {
 function addData() {
     const formData = new FormData(document.getElementById('addForm'));
     const newData = {};
+    let isValid = true;
+
+    // Проверка значений полей 'Length', 'Thickness', 'Diameter' и 'Weight'
     if (currentController === 'Pipes') {
         formData.forEach((value, key) => {
             // Преобразуем текстовое представление качества в булево значение
             if (key === 'Quality') {
                 newData[key] = value === 'true'; // true если годное, false если брак
             } else {
-                newData[key] = parseFloat(value); // Преобразуем в число
+                const floatValue = Number(value);
+                if ((isNaN(floatValue) || floatValue <= 0) && key != 'PackageId') {
+                    // Значение должно быть строго больше 0
+                    showErrorModal(`Ошибка: Поле "${key}" должно быть положительным числом.`);
+                    isValid = false;
+                } else {
+                    newData[key] = floatValue; // Преобразуем в число
+                }
             }
         });
 
-        console.log(newData); // Отладочная информацияf
-    }
-    else {
+        console.log(newData); // Отладочная информация
+    } else {
         formData.forEach((value, key) => {
             newData[key] = value;
         });
     }
-    fetch(`/api/${currentController}`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(newData),
-    })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Ошибка при добавлении данных');
-            }
-            return response.json();
+
+    // Если все значения допустимы, отправляем запрос на сервер
+    if (isValid) {
+        fetch(`/api/${currentController}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(newData),
         })
-        .then(() => {
-            fetchData(currentController);
-            closeAddModal();
-        })
-        .catch(error => {
-            console.error('Ошибка при добавлении данных:', error);
-            // Отображаем сообщение об ошибке в модальном окне
-            showErrorModal(error.message);
-        });
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Ошибка при добавлении данных');
+                }
+                return response.json();
+            })
+            .then(() => {
+                fetchData(currentController);
+                closeAddModal();
+            })
+            .catch(error => {
+                console.error('Ошибка при добавлении данных:', error);
+                // Отображаем сообщение об ошибке в модальном окне
+                showErrorModal(error.message);
+            });
+    }
 }
 
 // Функция для удаления записи
 function deleteData() {
     const recordId = document.getElementById('deleteDataId').value;
-    
+
     fetch(`/api/${currentController}/${recordId}`, {
         method: 'DELETE',
     })

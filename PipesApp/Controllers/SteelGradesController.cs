@@ -13,7 +13,8 @@ using Microsoft.Extensions.Hosting;
 namespace PipesApp.Controllers
 {
     [ApiController]
-    [Route("api/SteelGrades")] // Изменили маршрут
+    [Route("api/SteelGrades")] 
+
     public class SteelGradesController : ControllerBase
     {
         private readonly ApplicationContext _context;
@@ -58,6 +59,12 @@ namespace PipesApp.Controllers
             if (ModelState.IsValid)
             {
                 var steelGrade = _mapper.Map<SteelGrade>(steelGradeDto);
+                var steelWithSameGrade = _context.SteelGrades.FirstOrDefault(u => u.Grade == steelGrade.Grade && u.Id != steelGrade.Id);
+                if (steelWithSameGrade != null)
+                {
+                    ModelState.AddModelError("Grade", "Такая марка стали есть");
+                    return BadRequest(ModelState);
+                }
                 _context.SteelGrades.Add(steelGrade);
                 _context.SaveChanges();
                 return CreatedAtAction(nameof(GetSteelGrade), new { id = steelGrade.Id }, steelGrade);
@@ -79,7 +86,7 @@ namespace PipesApp.Controllers
             var steelWithSameGrade = _context.SteelGrades.FirstOrDefault(u => u.Grade == steelGrade.Grade && u.Id != steelGrade.Id);
             if (steelWithSameGrade != null)
             {
-                ModelState.AddModelError("Login", "Такая марка стали есть");
+                ModelState.AddModelError("Grade", "Такая марка стали есть");
                 return BadRequest(ModelState);
             }
 

@@ -1,7 +1,10 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.CodeAnalysis.Scripting;
 using Microsoft.EntityFrameworkCore;
+using NuGet.Protocol.Plugins;
 using PipesApp.Contexts;
 using PipesApp.Models;
+using System.Data;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -46,6 +49,7 @@ namespace PipesApp.Controllers
                     return BadRequest(ModelState);
                 }
 
+                user.Password = BCrypt.Net.BCrypt.HashPassword(user.Password);
                 _context.Users.Add(user);
                 _context.SaveChanges();
                 return CreatedAtAction(nameof(GetUser), new { id = user.Id }, user);
@@ -71,9 +75,12 @@ namespace PipesApp.Controllers
                 return BadRequest(ModelState);
             }
 
+            // Генерируем хеш пароля
+            var passwordHash = BCrypt.Net.BCrypt.HashPassword(user.Password);
+
             // Обновляем свойства существующего пользователя
             existingUser.Login = user.Login;
-            existingUser.Password = user.Password;
+            existingUser.Password = passwordHash;
             existingUser.Role = user.Role;
 
             _context.SaveChanges();
